@@ -86,6 +86,11 @@ public:
     {
         return priv_;
     }
+
+    T &getPrivateData(void)
+    {
+        return priv_;
+    }
 };
 
 }
