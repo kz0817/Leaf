@@ -12,6 +12,7 @@ class ArgParser {
     using OptionParser = std::function<void(T &, ArgParser &)>;
     T priv_;
     std::map<std::string, OptionParser> optParserMap_;
+    OptionParser completionHook_;
     int currArgIdx_;
     int currArgc_;
     char **currArgv_;
@@ -19,7 +20,8 @@ class ArgParser {
 
 public:
     ArgParser()
-    : currArgIdx_(-1),
+    : completionHook_([](T&, ArgParser &){}),
+      currArgIdx_(-1),
       currArgc_(-1),
       currArgv_(nullptr)
     {
@@ -32,6 +34,11 @@ public:
     void add(const std::string &option, OptionParser optParser)
     {
         optParserMap_.insert(std::make_pair(option, optParser));
+    }
+
+    void setCompletionHook(OptionParser hook)
+    {
+        completionHook_ = hook;
     }
 
     bool hasNext(void) const
@@ -61,7 +68,8 @@ public:
             if (!errorMsg_.empty())
                 return false;
         }
-        return true;
+        completionHook_(priv_, *this);
+        return errorMsg_.empty();
     }
 
     void error(const std::string &msg)
