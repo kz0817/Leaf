@@ -30,3 +30,30 @@
 *.exe
 *.out
 *.app
+
+# Vim temporary files
+*.swp
+*.swo
+
+# Autotools
+Makefile
+Makefile.in
+.deps
+
+aclocal.m4
+autom4te.cache
+compile
+config.guess
+config.log
+config.status
+config.sub
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+m4
+missing
+
+# Misc
+rc.local

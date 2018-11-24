@@ -1,15 +1,18 @@
 #pragma once
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <cassert>
 #include <map>
 #include <functional>
+#include <initializer_list>
 
 namespace Leaf
 {
 template <typename T>
 class ArgParser {
-    using OptionParser = std::function<void(T &, ArgParser &)>;
+    using OptionParser = std::function<void(T&, ArgParser&)>;
+    using SimpleParser = std::function<void(void)>;
     T priv_;
     std::map<std::string, OptionParser> optParserMap_;
     OptionParser completionHook_;
@@ -20,7 +23,7 @@ class ArgParser {
 
 public:
     ArgParser()
-    : completionHook_([](T&, ArgParser &){}),
+    : completionHook_([](T&, ArgParser&){}),
       currArgIdx_(-1),
       currArgc_(-1),
       currArgv_(nullptr)
@@ -31,9 +34,26 @@ public:
     {
     }
 
-    void add(const std::string &option, OptionParser optParser)
+    void add(const std::string& option, OptionParser parser)
     {
-        optParserMap_.insert(std::make_pair(option, optParser));
+        optParserMap_.insert(std::make_pair(option, parser));
+    }
+
+    void add(const std::string& option, SimpleParser parser)
+    {
+        add(option, [=](T&, ArgParser&) { parser(); });
+    }
+
+    void add(std::initializer_list<std::string> options, OptionParser parser)
+    {
+        for (auto optIt = options.begin(); optIt != options.end(); ++optIt)
+            add(*optIt, parser);
+    }
+
+    void add(std::initializer_list<std::string> options, SimpleParser parser)
+    {
+        for (auto optIt = options.begin(); optIt != options.end(); ++optIt)
+            add(*optIt, parser);
     }
 
     void setCompletionHook(OptionParser hook)
@@ -46,7 +66,7 @@ public:
         return currArgIdx_ < currArgc_ - 1;
     }
 
-    const char *getNext(void)
+    const char* getNext(void)
     {
         assert(hasNext());
         assert(currArgv_);
@@ -59,38 +79,45 @@ public:
         currArgc_ = argc;
         currArgv_ = argv;
         for (currArgIdx_ = 1; currArgIdx_ < currArgc_; currArgIdx_++) {
-            const std::string &opt = currArgv_[currArgIdx_];
+            const std::string& opt = currArgv_[currArgIdx_];
             auto optParserItr = optParserMap_.find(opt);
             if (optParserItr != optParserMap_.end())
                 (optParserItr->second)(priv_, *this);
             else
                 error("Unknown option: " + opt);
-            if (!errorMsg_.empty())
+            if (hasError())
                 return false;
         }
         completionHook_(priv_, *this);
         return errorMsg_.empty();
     }
 
-    void error(const std::string &msg)
+    void error(const std::string& msg)
     {
         errorMsg_ = msg;
     }
 
-    const std::string &getErrorMessage(void) const
+    bool hasError(void) const
+    {
+        return !errorMsg_.empty();
+    }
+
+    const std::string& getErrorMessage(void) const
     {
         return errorMsg_;
     }
 
-    const T &getPrivateData(void) const
+    const T& getPrivateData(void) const
     {
         return priv_;
     }
 
-    T &getPrivateData(void)
+    T& getPrivateData(void)
     {
         return priv_;
     }
 };
+
+using SimpleArgParser = ArgParser<void*>;
 
 }
