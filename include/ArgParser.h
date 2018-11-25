@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <cassert>
 #include <map>
 #include <functional>
@@ -13,20 +14,63 @@ template <typename T>
 class ArgParser {
     using OptionParser = std::function<void(T&, ArgParser&)>;
     using SimpleParser = std::function<void(void)>;
+
     T priv_;
     std::map<std::string, OptionParser> optParserMap_;
     OptionParser completionHook_;
+
     int currArgIdx_;
     int currArgc_;
     char **currArgv_;
+
     std::string errorMsg_;
 
+    struct Profile {
+        std::string name;
+        std::string description;
+        std::string synopsis;
+    } profile_;
+
+    struct Help {
+        std::vector<std::string> options;
+        std::string usage;
+        std::string message;
+    };
+    std::vector<Help> optionHelps_;
+
+    void add_(const std::string& option, OptionParser parser)
+    {
+        optParserMap_.insert(std::make_pair(option, parser));
+    }
+
+    void add_(const std::string& option, SimpleParser parser)
+    {
+        add_(option, [=](T&, ArgParser&) { parser(); });
+    }
+
+    std::string join_(
+      const std::vector<std::string>& vect, const std::string& sep) const
+    {
+        std::stringstream ss;
+        if (vect.empty())
+            return "";
+
+        const size_t lastIdx = vect.size() - 1;
+        for (size_t i = 0; i < lastIdx; i++)
+            ss << vect[i] << sep;
+        ss << vect[lastIdx];
+        return ss.str();
+    }
+
 public:
-    ArgParser()
+    ArgParser(
+      const std::string &name = "", const std::string &desc = "",
+      const std::string &synopsis = "")
     : completionHook_([](T&, ArgParser&){}),
       currArgIdx_(-1),
       currArgc_(-1),
-      currArgv_(nullptr)
+      currArgv_(nullptr),
+      profile_({name.empty() ? "[PROGRAM]" : name, desc, synopsis})
     {
     }
 
@@ -34,26 +78,22 @@ public:
     {
     }
 
-    void add(const std::string& option, OptionParser parser)
-    {
-        optParserMap_.insert(std::make_pair(option, parser));
-    }
-
-    void add(const std::string& option, SimpleParser parser)
-    {
-        add(option, [=](T&, ArgParser&) { parser(); });
-    }
-
-    void add(std::initializer_list<std::string> options, OptionParser parser)
+    template <typename PARSER_TYPE>
+    void add(std::initializer_list<std::string> options, PARSER_TYPE parser,
+             const std::string& optionUsage = "",
+             const std::string& optionDesc = "")
     {
         for (auto optIt = options.begin(); optIt != options.end(); ++optIt)
-            add(*optIt, parser);
+            add_(*optIt, parser);
+        optionHelps_.emplace_back(Help({options, optionUsage, optionDesc}));
     }
 
-    void add(std::initializer_list<std::string> options, SimpleParser parser)
+    template <typename PARSER_TYPE>
+    void add(const std::string& option, PARSER_TYPE parser,
+             const std::string& optionUsage = "",
+             const std::string& optionDesc = "")
     {
-        for (auto optIt = options.begin(); optIt != options.end(); ++optIt)
-            add(*optIt, parser);
+        add({option}, parser, optionUsage, optionDesc);
     }
 
     void setCompletionHook(OptionParser hook)
@@ -115,6 +155,36 @@ public:
     T& getPrivateData(void)
     {
         return priv_;
+    }
+
+    std::string generateUsage(void) const
+    {
+        constexpr auto spaces = "    ";
+        std::stringstream ss;
+
+        ss << "NAME" << std::endl;
+        ss << spaces << profile_.name;
+        if (!profile_.description.empty())
+            ss << " -- " << profile_.description;
+        ss << std::endl << std::endl;
+
+        if (!profile_.synopsis.empty()) {
+            ss << "SYNOPSIS" << std::endl;
+            ss << spaces << profile_.synopsis << std::endl << std::endl;
+        }
+
+        ss << "OPTIONS" << std::endl;
+        for (const auto& help: optionHelps_) {
+            ss << spaces << join_(help.options, ",");
+            if (!help.usage.empty())
+               ss << " " << help.usage;
+            ss << std::endl;
+            if (!help.message.empty())
+                ss << spaces << spaces << help.message << std::endl;
+            ss << std::endl;
+        }
+
+        return ss.str();
     }
 };
 

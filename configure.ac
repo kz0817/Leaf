@@ -30,6 +30,7 @@ fi
 
 AC_OUTPUT([
 Makefile
+examples/Makefile
 test/Makefile
 ])
 

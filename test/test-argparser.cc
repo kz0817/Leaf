@@ -138,7 +138,7 @@ void test_error(void)
     cppcut_assert_equal(string("Test-Error"), parser.getErrorMessage());
 }
 
-void test_multiple_option_styles_for_ArgParser(void)
+void test_multiple_options_for_ArgParser(void)
 {
     for (const auto& option: {"-x", "--x-long-style"}) {
         struct Args {
@@ -155,7 +155,7 @@ void test_multiple_option_styles_for_ArgParser(void)
     }
 }
 
-void test_multiple_option_styles_for_SimpleArgParser(void)
+void test_multiple_options_for_SimpleArgParser(void)
 {
     for (const auto& option: {"-x", "--x-long-style"}) {
         int x = 0;
@@ -165,6 +165,46 @@ void test_multiple_option_styles_for_SimpleArgParser(void)
         cut_assert_false(parser.hasError(), cutterMessage(parser));
         cppcut_assert_equal(3, x);
     }
+}
+
+void test_generateUsage(void)
+{
+    SimpleArgParser parser("TP", "A Test Program",
+                           "test-prog [-abnxh]");
+    parser.add({"-a", "--apple"}, [](){}, "NUMBER",
+                "A number of apples");
+    parser.add("-b", [](){}, "NUMBER",
+                "A number of bananas");
+    parser.add({"-n", "--name"}, [](){}, "[NAME]",
+                "The name of the owner (Default: Taro)");
+    parser.add("-x", [](){});
+    parser.add({"-h", "--help"}, [](){}, "",
+                "A help message is shown");
+
+    const string expected =
+    "NAME\n"
+    "    TP -- A Test Program\n"
+    "\n"
+    "SYNOPSIS\n"
+    "    test-prog [-abnxh]\n"
+    "\n"
+    "OPTIONS\n"
+    "    -a,--apple NUMBER\n"
+    "        A number of apples\n"
+    "\n"
+    "    -b NUMBER\n"
+    "        A number of bananas\n"
+    "\n"
+    "    -n,--name [NAME]\n"
+    "        The name of the owner (Default: Taro)\n"
+    "\n"
+    "    -x\n"
+    "\n"
+    "    -h,--help\n"
+    "        A help message is shown\n"
+    "\n"
+    ;
+    cppcut_assert_equal(expected, parser.generateUsage());
 }
 
 } // test_argparser

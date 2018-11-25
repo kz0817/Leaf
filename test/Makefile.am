@@ -6,7 +6,7 @@ if WITH_CUTTER
 noinst_LTLIBRARIES = test-argparser.la
 endif
 
-AM_CXXFLAGS = -std=c++17 -g3 -Wall $(CUTTER_CFLAGS) -I ../include
+AM_CXXFLAGS = -std=c++17 -g3 -Wall -O3 $(CUTTER_CFLAGS) -I ../include
 
 test_argparser_la_SOURCES = test-argparser.cc
 AM_LDFLAGS = -module -rpath $(libdir) -avoid-version -no-undefined
